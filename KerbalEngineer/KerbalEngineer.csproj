@@ -131,6 +131,12 @@
     <Compile Include="Flight\Readouts\Thermal\HottestTemperature.cs" />
     <Compile Include="Flight\Readouts\Thermal\HottestPart.cs" />
     <Compile Include="Flight\Readouts\Thermal\ThermalProcessor.cs" />
+    <Compile Include="Flight\Readouts\Vessel\AeroAOA.cs" />
+    <Compile Include="Flight\Readouts\Vessel\AeroDragForce.cs" />
+    <Compile Include="Flight\Readouts\Vessel\AeroGravityForce.cs" />
+    <Compile Include="Flight\Readouts\Vessel\AeroLID.cs" />
+    <Compile Include="Flight\Readouts\Vessel\AeroLiftForce.cs" />
+    <Compile Include="Flight\Readouts\Vessel\AeroProcessor.cs" />
     <Compile Include="Flight\Readouts\Vessel\Name.cs" />
     <Compile Include="Flight\Readouts\Vessel\AttitudeProcessor.cs" />
     <Compile Include="Flight\Readouts\Vessel\DeltaVCurrentTotal.cs" />

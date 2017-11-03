@@ -148,6 +148,11 @@ namespace KerbalEngineer.Flight.Readouts
                 readouts.Add(new HeadingRate());
                 readouts.Add(new PitchRate());
                 readouts.Add(new RollRate());
+                readouts.Add(new AeroLiftForce());
+                readouts.Add(new AeroDragForce());
+                readouts.Add(new AeroAOA());
+                readouts.Add(new AeroGravityForce());
+                readouts.Add(new AeroLID());
 
                 // Rendezvous
                 readouts.Add(new TargetSelector());
