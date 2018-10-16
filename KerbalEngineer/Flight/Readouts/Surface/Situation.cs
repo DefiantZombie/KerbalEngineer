@@ -41,32 +41,32 @@ namespace KerbalEngineer.Flight.Readouts.Surface
 
         #region Methods: public
 
-        public override void Draw(SectionModule section)
+        public override void Draw(Unity.Flight.ISectionModule section)
         {
             switch (ScienceUtil.GetExperimentSituation(FlightGlobals.ActiveVessel))
             {
                 case ExperimentSituations.SrfLanded:
-                    this.DrawLine("Landed");
+                    this.DrawLine("Landed", section.IsHud);
                     break;
 
                 case ExperimentSituations.SrfSplashed:
-                    this.DrawLine("Splashed");
+                    this.DrawLine("Splashed", section.IsHud);
                     break;
 
                 case ExperimentSituations.FlyingLow:
-                    this.DrawLine("Flying Low");
+                    this.DrawLine("Flying Low", section.IsHud);
                     break;
 
                 case ExperimentSituations.FlyingHigh:
-                    this.DrawLine("Flying High");
+                    this.DrawLine("Flying High", section.IsHud);
                     break;
 
                 case ExperimentSituations.InSpaceLow:
-                    this.DrawLine("In Space Low");
+                    this.DrawLine("In Space Low", section.IsHud);
                     break;
 
                 case ExperimentSituations.InSpaceHigh:
-                    this.DrawLine("In Space High");
+                    this.DrawLine("In Space High", section.IsHud);
                     break;
             }
         }

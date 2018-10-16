@@ -19,22 +19,22 @@
 
 #region Using Directives
 
-using KerbalEngineer.Extensions;
 using KerbalEngineer.Flight.Sections;
+using KerbalEngineer.Helpers;
 
 #endregion
 
-namespace KerbalEngineer.Flight.Readouts.Rendezvous
+namespace KerbalEngineer.Flight.Readouts.Vessel
 {
-    public class RelativeRadialVelocity : ReadoutModule
+    public class RCSDeltaV : ReadoutModule
     {
         #region Constructors
 
-        public RelativeRadialVelocity()
+        public RCSDeltaV()
         {
-            this.Name = "Relative Radial Velocity";
-            this.Category = ReadoutCategory.GetCategory("Rendezvous");
-            this.HelpString = "Relative radial velocity between your vessel and the target object";
+            this.Name = "RCS DeltaV";
+            this.Category = ReadoutCategory.GetCategory("Vessel");
+            this.HelpString = "Shows the current possible DeltaV from RCS";
             this.IsDefault = false;
         }
 
@@ -42,22 +42,23 @@ namespace KerbalEngineer.Flight.Readouts.Rendezvous
 
         #region Methods: public
 
-        public override void Draw(SectionModule section)
+        public override void Draw(Unity.Flight.ISectionModule section)
         {
-            if (RendezvousProcessor.ShowDetails)
+            if (SimulationProcessor.ShowDetails)
             {
-               this.DrawLine(RendezvousProcessor.RelativeRadialVelocity.ToSpeed(), section.IsHud);
+                this.DrawLine(SimulationProcessor.LastStage.RCSdeltaVStart.ToString("N0") + "m/s (" + TimeFormatter.ConvertToString(SimulationProcessor.LastStage.RCSBurnTime) + ")", section.IsHud);
+
             }
         }
 
         public override void Reset()
         {
-            FlightEngineerCore.Instance.AddUpdatable(RendezvousProcessor.Instance);
+            FlightEngineerCore.Instance.AddUpdatable(SimulationProcessor.Instance);
         }
 
         public override void Update()
         {
-            RendezvousProcessor.RequestUpdate();
+            SimulationProcessor.RequestUpdate();
         }
 
         #endregion

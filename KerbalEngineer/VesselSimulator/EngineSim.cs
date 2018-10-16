@@ -95,12 +95,17 @@ namespace KerbalEngineer.VesselSimulator
             bool atmChangeFlow = engineMod.atmChangeFlow;
             FloatCurve atmCurve = engineMod.useAtmCurve ? engineMod.atmCurve : null;
             FloatCurve velCurve = engineMod.useVelCurve ? engineMod.velCurve : null;
+            FloatCurve thrustCurve = engineMod.useThrustCurve ? engineMod.thrustCurve : null;
             float currentThrottle = engineMod.currentThrottle;
             float IspG = engineMod.g;
             bool throttleLocked = engineMod.throttleLocked || fullThrust;
             List<Propellant> propellants = engineMod.propellants;
+            float thrustCurveRatio = engineMod.thrustCurveRatio;
             bool active = engineMod.isOperational;
-            float resultingThrust = engineMod.resultingThrust;
+            
+            //I do not know if this matters. RF and stock always have finalThrust. But stock uses resultingThrust in the mass flow calculations, so keep it.
+            float resultingThrust = SimManager.hasInstalledRealFuels ? engineMod.finalThrust : engineMod.resultingThrust;
+
             bool isFlamedOut = engineMod.flameout;
 			
 			EngineSim engineSim = pool.Borrow();
@@ -121,28 +126,36 @@ namespace KerbalEngineer.VesselSimulator
             {
                 if (log != null) log.AppendLine("hasVessel is true"); 
 
-                float flowModifier = GetFlowModifier(atmChangeFlow, atmCurve, engineSim.partSim.part.atmDensity, velCurve, machNumber, ref engineSim.maxMach);
+                foreach(Propellant p in propellants) {
+                    if (p.ignoreForThrustCurve) continue;
+                    double ratio = p.totalResourceAvailable / p.totalResourceCapacity;
+                    if (ratio < thrustCurveRatio)
+                        thrustCurveRatio = (float) ratio;
+                }
+
+                float flowModifier = GetFlowModifier(atmChangeFlow, atmCurve, engineSim.partSim.part.atmDensity, velCurve, machNumber, thrustCurve, thrustCurveRatio, ref engineSim.maxMach);
                 engineSim.isp = atmosphereCurve.Evaluate((float)atmosphere);
                 engineSim.thrust = GetThrust(Mathf.Lerp(minFuelFlow, maxFuelFlow, GetThrustPercent(thrustPercentage)) * flowModifier, engineSim.isp);
-                engineSim.actualThrust = engineSim.isActive ? resultingThrust : 0.0;
+                engineSim.actualThrust = engineSim.isActive ?  resultingThrust : 0.0;
                 if (log != null)
                 {
                     log.buf.AppendFormat("flowMod = {0:g6}\n", flowModifier);
                     log.buf.AppendFormat("isp     = {0:g6}\n", engineSim.isp);
                     log.buf.AppendFormat("thrust  = {0:g6}\n", engineSim.thrust);
                     log.buf.AppendFormat("actual  = {0:g6}\n", engineSim.actualThrust);
+                    log.buf.AppendFormat("final  = {0:g6}\n", engineMod.finalThrust);
+                    log.buf.AppendFormat("resulting  = {0:g6}\n", engineMod.resultingThrust);
                 }
 
-				if (throttleLocked)
+                if (throttleLocked)
                 {
                     if (log != null) log.AppendLine("throttleLocked is true, using thrust for flowRate");
                     flowRate = GetFlowRate(engineSim.thrust, engineSim.isp);
                 }
                 else
                 {
-                    if (currentThrottle > 0.0f && engineSim.partSim.isLanded == false)
+                    if (currentThrottle > 0.0f  && engineSim.partSim.isLanded == false)
                     {
-						// TODO: This bit doesn't work for RF engines
 						if (log != null) log.AppendLine("throttled up and not landed, using actualThrust for flowRate");
                         flowRate = GetFlowRate(engineSim.actualThrust, engineSim.isp);
                     }
@@ -156,7 +169,7 @@ namespace KerbalEngineer.VesselSimulator
             else
             {
                 if (log != null) log.buf.AppendLine("hasVessel is false");
-                float flowModifier = GetFlowModifier(atmChangeFlow, atmCurve, CelestialBodies.SelectedBody.GetDensity(BuildAdvanced.Altitude), velCurve, machNumber, ref engineSim.maxMach);
+                float flowModifier = GetFlowModifier(atmChangeFlow, atmCurve, CelestialBodies.SelectedBody.GetDensity(BuildAdvanced.Altitude), velCurve, machNumber, thrustCurve, thrustCurveRatio, ref engineSim.maxMach);
                 engineSim.isp = atmosphereCurve.Evaluate((float)atmosphere);
                 engineSim.thrust = GetThrust(Mathf.Lerp(minFuelFlow, maxFuelFlow, GetThrustPercent(thrustPercentage)) * flowModifier, engineSim.isp);
                 engineSim.actualThrust = 0d;
@@ -188,7 +201,7 @@ namespace KerbalEngineer.VesselSimulator
             {
                 Propellant propellant = propellants[i];
 
-                if (propellant.name == "ElectricCharge" || propellant.name == "IntakeAir")
+                if (propellant.ignoreForIsp || propellant.name == "ElectricCharge" || propellant.name == "IntakeAir")
                 {
                     continue;
                 }
@@ -256,7 +269,7 @@ namespace KerbalEngineer.VesselSimulator
             return isp * Units.GRAVITY;
         }
 
-        public static float GetFlowModifier(bool atmChangeFlow, FloatCurve atmCurve, double atmDensity, FloatCurve velCurve, float machNumber, ref float maxMach)
+        public static float GetFlowModifier(bool atmChangeFlow, FloatCurve atmCurve, double atmDensity, FloatCurve velCurve, float machNumber, FloatCurve thrustCurve, float thrustCurveRatio, ref float maxMach)
         {
             float flowModifier = 1.0f;
             if (atmChangeFlow)
@@ -271,6 +284,10 @@ namespace KerbalEngineer.VesselSimulator
             {
                 flowModifier = flowModifier * velCurve.Evaluate(machNumber);
                 maxMach = velCurve.maxTime;
+            }
+            if (thrustCurve != null)
+            {
+                flowModifier = flowModifier * thrustCurve.Evaluate(thrustCurveRatio);
             }
             if (flowModifier < float.Epsilon)
             {
@@ -438,7 +455,7 @@ namespace KerbalEngineer.VesselSimulator
                         if (log != null) log.Append("Find ", ResourceContainer.GetResourceName(type), " sources for ", partSim.name)
                                             .AppendLine(":", partSim.partId);
 
-                        partSim.GetSourceSet(type, true, allParts, visited, sourcePartSet, log, "");
+                        partSim.GetSourceSet(type, allParts, visited, sourcePartSet, log, "");
                         break;
 
                     default:
